@@ -1,0 +1,242 @@
+[
+  {
+    "id": 1,
+    "category": "Revenue Metrics",
+    "question": "What is our current MRR?",
+    "sql": "SELECT SUM(CASE WHEN billing_cycle = 'monthly' THEN amount WHEN billing_cycle = 'annual' THEN amount / 12.0 WHEN billing_cycle = 'quarterly' THEN amount / 3.0 END) as mrr FROM subscriptions WHERE status = 'active'",
+    "explanation": "MRR calculation normalizes all billing cycles to monthly. Annual divided by 12, quarterly by 3.",
+    "business_context": "MRR is the most important SaaS metric - it shows predictable recurring revenue."
+  },
+  {
+    "id": 2,
+    "category": "Revenue Metrics",
+    "question": "Show me MRR broken down by plan tier",
+    "sql": "SELECT p.plan_tier, SUM(CASE WHEN s.billing_cycle = 'monthly' THEN s.amount WHEN s.billing_cycle = 'annual' THEN s.amount / 12.0 WHEN s.billing_cycle = 'quarterly' THEN s.amount / 3.0 END) as mrr FROM subscriptions s JOIN plans p ON s.plan_id = p.plan_id WHERE s.status = 'active' GROUP BY p.plan_tier ORDER BY mrr DESC",
+    "explanation": "Joins subscriptions to plans table to get tier, then aggregates MRR by tier.",
+    "business_context": "Shows which plan tiers drive the most revenue. Useful for pricing strategy."
+  },
+  {
+    "id": 3,
+    "category": "Revenue Metrics",
+    "question": "What's our ARR?",
+    "sql": "SELECT SUM(CASE WHEN billing_cycle = 'monthly' THEN amount * 12 WHEN billing_cycle = 'annual' THEN amount WHEN billing_cycle = 'quarterly' THEN amount * 4 END) as arr FROM subscriptions WHERE status = 'active'",
+    "explanation": "ARR annualizes all subscription amounts. Monthly multiplied by 12, quarterly by 4.",
+    "business_context": "ARR is used for long-term planning and company valuation."
+  },
+  {
+    "id": 4,
+    "category": "Customer Metrics",
+    "question": "How many active customers do we have?",
+    "sql": "SELECT COUNT(DISTINCT user_id) as active_customers FROM subscriptions WHERE status = 'active'",
+    "explanation": "Counts unique users with active subscriptions. DISTINCT prevents double-counting if user has multiple active subs.",
+    "business_context": "Total active customer count - key growth metric."
+  },
+  {
+    "id": 5,
+    "category": "Customer Metrics",
+    "question": "What's our monthly churn rate?",
+    "sql": "SELECT COUNT(DISTINCT CASE WHEN status = 'cancelled' AND end_date >= date('now', 'start of month') AND end_date < date('now', 'start of month', '+1 month') THEN user_id END) * 100.0 / COUNT(DISTINCT CASE WHEN start_date < date('now', 'start of month') AND status IN ('active', 'cancelled') THEN user_id END) as churn_rate FROM subscriptions",
+    "explanation": "Churn rate = customers lost this month / customers at start of month. Only counts paying customers.",
+    "business_context": "Monthly churn rate. Target < 5% for healthy SaaS business."
+  },
+  {
+    "id": 6,
+    "category": "Customer Metrics",
+    "question": "What's the average revenue per user?",
+    "sql": "SELECT SUM(CASE WHEN billing_cycle = 'monthly' THEN amount WHEN billing_cycle = 'annual' THEN amount / 12.0 WHEN billing_cycle = 'quarterly' THEN amount / 3.0 END) / COUNT(DISTINCT user_id) as arpu FROM subscriptions WHERE status = 'active'",
+    "explanation": "ARPU = total MRR / number of active users. Shows average value per customer.",
+    "business_context": "ARPU trends indicate pricing power and upsell effectiveness."
+  },
+  {
+    "id": 7,
+    "category": "Segmentation",
+    "question": "Show me customer distribution by industry",
+    "sql": "SELECT industry, COUNT(DISTINCT u.user_id) as customer_count, SUM(CASE WHEN s.billing_cycle = 'monthly' THEN s.amount WHEN s.billing_cycle = 'annual' THEN s.amount / 12.0 WHEN s.billing_cycle = 'quarterly' THEN s.amount / 3.0 END) as mrr FROM users u JOIN subscriptions s ON u.user_id = s.user_id WHERE s.status = 'active' GROUP BY industry ORDER BY mrr DESC",
+    "explanation": "Joins users and subscriptions to aggregate customers and revenue by industry vertical.",
+    "business_context": "Identifies which industries generate most revenue for targeted marketing."
+  },
+  {
+    "id": 8,
+    "category": "Segmentation",
+    "question": "Which company sizes generate the most revenue?",
+    "sql": "SELECT u.company_size, COUNT(DISTINCT u.user_id) as customers, SUM(CASE WHEN s.billing_cycle = 'monthly' THEN s.amount WHEN s.billing_cycle = 'annual' THEN s.amount / 12.0 WHEN s.billing_cycle = 'quarterly' THEN s.amount / 3.0 END) as mrr, SUM(CASE WHEN s.billing_cycle = 'monthly' THEN s.amount WHEN s.billing_cycle = 'annual' THEN s.amount / 12.0 WHEN s.billing_cycle = 'quarterly' THEN s.amount / 3.0 END) / COUNT(DISTINCT u.user_id) as arpu FROM users u JOIN subscriptions s ON u.user_id = s.user_id WHERE s.status = 'active' GROUP BY u.company_size ORDER BY mrr DESC",
+    "explanation": "Segments by company size, calculates customer count, MRR, and ARPU for each segment.",
+    "business_context": "Shows which customer segments are most valuable. Helps prioritize sales efforts."
+  },
+  {
+    "id": 9,
+    "category": "Cohort Analysis",
+    "question": "Show me customer cohorts by signup month",
+    "sql": "SELECT strftime('%Y-%m', signup_date) as cohort_month, COUNT(DISTINCT user_id) as cohort_size FROM users GROUP BY cohort_month ORDER BY cohort_month",
+    "explanation": "Groups users by their signup month to create cohorts. Uses strftime to format dates.",
+    "business_context": "Cohort analysis tracks customer behavior over time. Foundation for retention analysis."
+  },
+  {
+    "id": 10,
+    "category": "Cohort Analysis",
+    "question": "Show me MRR by customer cohort",
+    "sql": "SELECT strftime('%Y-%m', u.signup_date) as cohort_month, SUM(CASE WHEN s.billing_cycle = 'monthly' THEN s.amount WHEN s.billing_cycle = 'annual' THEN s.amount / 12.0 WHEN s.billing_cycle = 'quarterly' THEN s.amount / 3.0 END) as cohort_mrr FROM users u JOIN subscriptions s ON u.user_id = s.user_id WHERE s.status = 'active' GROUP BY cohort_month ORDER BY cohort_month",
+    "explanation": "Joins users and subscriptions, groups by signup cohort, sums MRR per cohort.",
+    "business_context": "Shows which acquisition periods produced the most valuable customers."
+  },
+  {
+    "id": 11,
+    "category": "Engagement",
+    "question": "How many daily active users did we have yesterday?",
+    "sql": "SELECT COUNT(DISTINCT user_id) as dau FROM usage_events WHERE event_date = date('now', '-1 day') AND event_type IN ('login', 'feature_use', 'export')",
+    "explanation": "Counts unique users with meaningful events yesterday. Excludes automated API calls.",
+    "business_context": "DAU measures product stickiness. Compare to MAU for engagement depth."
+  },
+  {
+    "id": 12,
+    "category": "Engagement",
+    "question": "What are the most popular features?",
+    "sql": "SELECT feature_name, COUNT(DISTINCT user_id) as unique_users, COUNT(*) as total_events FROM usage_events WHERE feature_name IS NOT NULL AND event_date >= date('now', '-30 days') GROUP BY feature_name ORDER BY unique_users DESC LIMIT 10",
+    "explanation": "Aggregates feature usage over last 30 days, showing both unique users and total events.",
+    "business_context": "Identifies which features drive engagement. Low usage may indicate discoverability issues."
+  },
+  {
+    "id": 13,
+    "category": "Engagement",
+    "question": "What's the feature adoption rate for our dashboard?",
+    "sql": "SELECT COUNT(DISTINCT user_id) * 100.0 / (SELECT COUNT(DISTINCT user_id) FROM users WHERE status = 'active') as adoption_rate FROM usage_events WHERE feature_name = 'dashboard' AND event_date >= date('now', '-30 days')",
+    "explanation": "Calculates percentage of active users who used the dashboard in last 30 days.",
+    "business_context": "Low adoption of key features may indicate onboarding problems."
+  },
+  {
+    "id": 14,
+    "category": "Support",
+    "question": "How many open support tickets do we have?",
+    "sql": "SELECT COUNT(*) as open_tickets FROM support_tickets WHERE status IN ('open', 'in_progress')",
+    "explanation": "Counts tickets that are not yet resolved or closed.",
+    "business_context": "Open ticket backlog indicates support team capacity and customer satisfaction risk."
+  },
+  {
+    "id": 15,
+    "category": "Support",
+    "question": "What's the average ticket resolution time by category?",
+    "sql": "SELECT category, AVG(resolution_time_hours) as avg_resolution_hours, COUNT(*) as ticket_count FROM support_tickets WHERE status IN ('resolved', 'closed') AND resolution_time_hours IS NOT NULL GROUP BY category ORDER BY avg_resolution_hours DESC",
+    "explanation": "Aggregates resolved tickets by category, calculates average resolution time.",
+    "business_context": "Identifies which issue types take longest to resolve. Helps prioritize process improvements."
+  },
+  {
+    "id": 16,
+    "category": "Support",
+    "question": "Which customers have the most support tickets?",
+    "sql": "SELECT u.user_id, u.email, u.company_name, COUNT(st.ticket_id) as ticket_count, AVG(st.satisfaction_score) as avg_satisfaction FROM users u JOIN support_tickets st ON u.user_id = st.user_id GROUP BY u.user_id, u.email, u.company_name HAVING COUNT(st.ticket_id) > 5 ORDER BY ticket_count DESC",
+    "explanation": "Identifies customers with high support burden. Filters for 5+ tickets, includes satisfaction scores.",
+    "business_context": "High-touch customers may need proactive CS intervention or have product fit issues."
+  },
+  {
+    "id": 17,
+    "category": "Health & Churn",
+    "question": "Show me customers at high churn risk",
+    "sql": "SELECT u.user_id, u.email, u.company_name, ch.health_score, ch.churn_risk FROM users u JOIN customer_health ch ON u.user_id = ch.user_id WHERE ch.churn_risk = 'high' AND ch.score_date = (SELECT MAX(score_date) FROM customer_health WHERE user_id = u.user_id) ORDER BY ch.health_score ASC",
+    "explanation": "Joins users and customer_health, filters for high churn risk, uses subquery to get latest scores.",
+    "business_context": "Actionable list for CS team to intervene. Prioritize by lowest health score."
+  },
+  {
+    "id": 18,
+    "category": "Health & Churn",
+    "question": "What's the distribution of customer health scores?",
+    "sql": "SELECT CASE WHEN health_score >= 80 THEN 'Excellent (80-100)' WHEN health_score >= 60 THEN 'Good (60-79)' WHEN health_score >= 40 THEN 'At Risk (40-59)' ELSE 'Critical (0-39)' END as health_category, COUNT(DISTINCT user_id) as customer_count FROM customer_health WHERE score_date >= date('now', '-7 days') GROUP BY health_category ORDER BY MIN(health_score) DESC",
+    "explanation": "Buckets customers into health segments using CASE statement. Uses recent scores only.",
+    "business_context": "Quick snapshot of customer health distribution for leadership dashboards."
+  },
+  {
+    "id": 19,
+    "category": "Marketing & Attribution",
+    "question": "What's our CAC by marketing channel?",
+    "sql": "SELECT c.channel, SUM(c.budget) / COUNT(DISTINCT ca.user_id) as cac, COUNT(DISTINCT ca.user_id) as customers_acquired FROM campaigns c JOIN campaign_attribution ca ON c.campaign_id = ca.campaign_id WHERE ca.attribution_date >= date('now', '-90 days') GROUP BY c.channel ORDER BY cac ASC",
+    "explanation": "Calculates Customer Acquisition Cost per channel: total budget / customers acquired.",
+    "business_context": "Identifies most cost-efficient acquisition channels. Allocate budget to lowest CAC."
+  },
+  {
+    "id": 20,
+    "category": "Marketing & Attribution",
+    "question": "Which campaign generated the most revenue?",
+    "sql": "SELECT c.campaign_name, c.channel, COUNT(DISTINCT ca.user_id) as customers, SUM(t.amount) as total_revenue, SUM(t.amount) / COUNT(DISTINCT ca.user_id) as avg_ltv FROM campaigns c JOIN campaign_attribution ca ON c.campaign_id = ca.campaign_id JOIN transactions t ON ca.user_id = t.user_id WHERE t.status = 'success' GROUP BY c.campaign_id, c.campaign_name, c.channel ORDER BY total_revenue DESC LIMIT 10",
+    "explanation": "Multi-table join: campaigns → attribution → transactions. Calculates total revenue and average LTV per campaign.",
+    "business_context": "Identifies highest-ROI campaigns. Use to replicate successful campaign strategies."
+  },
+  {
+    "id": 21,
+    "category": "Conversion",
+    "question": "What's our trial to paid conversion rate?",
+    "sql": "SELECT COUNT(DISTINCT CASE WHEN status = 'active' AND trial_end_date IS NOT NULL THEN user_id END) * 100.0 / COUNT(DISTINCT CASE WHEN trial_end_date IS NOT NULL THEN user_id END) as conversion_rate FROM subscriptions",
+    "explanation": "Conversion rate = users who converted from trial / total trial users. Only counts users who had trials.",
+    "business_context": "Typical SaaS trial conversion: 10-25%. Low rates indicate onboarding or pricing issues."
+  },
+  {
+    "id": 22,
+    "category": "Conversion",
+    "question": "How many users upgraded to a higher plan this month?",
+    "sql": "SELECT COUNT(DISTINCT s2.user_id) as upgraded_users FROM subscriptions s1 JOIN subscriptions s2 ON s1.user_id = s2.user_id JOIN plans p1 ON s1.plan_id = p1.plan_id JOIN plans p2 ON s2.plan_id = p2.plan_id WHERE s1.end_date >= date('now', 'start of month') AND s1.end_date < date('now', 'start of month', '+1 month') AND s2.start_date = s1.end_date AND p2.monthly_price > p1.monthly_price",
+    "explanation": "Self-join on subscriptions to find sequential upgrades. Compares plan prices to verify upgrade.",
+    "business_context": "Upgrade rate indicates value realization. High upgrades = strong product-market fit."
+  },
+  {
+    "id": 23,
+    "category": "Time Series",
+    "question": "Show me MRR trend over the last 12 months",
+    "sql": "SELECT strftime('%Y-%m', created_at) as month, SUM(CASE WHEN billing_cycle = 'monthly' THEN amount WHEN billing_cycle = 'annual' THEN amount / 12.0 WHEN billing_cycle = 'quarterly' THEN amount / 3.0 END) as mrr FROM subscriptions WHERE status = 'active' AND created_at >= date('now', '-12 months') GROUP BY month ORDER BY month",
+    "explanation": "Groups by month, calculates MRR for each month over past year. Shows growth trajectory.",
+    "business_context": "MRR growth rate is key investor metric. Visualize as line chart."
+  },
+  {
+    "id": 24,
+    "category": "Time Series",
+    "question": "What was our revenue last quarter?",
+    "sql": "SELECT SUM(amount) as quarterly_revenue FROM transactions WHERE status = 'success' AND transaction_type = 'charge' AND transaction_date >= date('now', '-3 months') AND transaction_date < date('now')",
+    "explanation": "Sums successful transactions over last 3 months. Excludes refunds.",
+    "business_context": "Quarterly revenue for financial reporting. Use transactions table for actual cash."
+  },
+  {
+    "id": 25,
+    "category": "Experimentation",
+    "question": "Show me conversion rates by experiment variant",
+    "sql": "SELECT e.experiment_name, ea.variant, COUNT(DISTINCT ea.user_id) as users_in_variant, COUNT(DISTINCT CASE WHEN ea.converted = 1 THEN ea.user_id END) as converted_users, COUNT(DISTINCT CASE WHEN ea.converted = 1 THEN ea.user_id END) * 100.0 / COUNT(DISTINCT ea.user_id) as conversion_rate FROM experiments e JOIN experiment_assignments ea ON e.experiment_id = ea.experiment_id WHERE e.status = 'active' GROUP BY e.experiment_name, ea.variant ORDER BY e.experiment_name, ea.variant",
+    "explanation": "Calculates conversion rate for each variant in active experiments. Compares A vs B performance.",
+    "business_context": "A/B test results. Statistical significance requires 100+ conversions per variant."
+  },
+  {
+    "id": 26,
+    "category": "Complex Joins",
+    "question": "Show me high-value customers who haven't logged in recently",
+    "sql": "SELECT u.user_id, u.email, u.company_name, SUM(CASE WHEN s.billing_cycle = 'monthly' THEN s.amount WHEN s.billing_cycle = 'annual' THEN s.amount / 12.0 WHEN s.billing_cycle = 'quarterly' THEN s.amount / 3.0 END) as mrr, MAX(ue.event_date) as last_login FROM users u JOIN subscriptions s ON u.user_id = s.user_id LEFT JOIN usage_events ue ON u.user_id = ue.user_id AND ue.event_type = 'login' WHERE s.status = 'active' GROUP BY u.user_id, u.email, u.company_name HAVING mrr > 100 AND (last_login IS NULL OR last_login < date('now', '-30 days')) ORDER BY mrr DESC",
+    "explanation": "Complex query: joins subscriptions for revenue, left joins usage for activity. Filters for high MRR + low engagement.",
+    "business_context": "Churn risk detection. High-value but disengaged customers need immediate CS intervention."
+  },
+  {
+    "id": 27,
+    "category": "Complex Joins",
+    "question": "Compare revenue and support burden by plan tier",
+    "sql": "SELECT p.plan_tier, COUNT(DISTINCT s.user_id) as customers, SUM(CASE WHEN s.billing_cycle = 'monthly' THEN s.amount WHEN s.billing_cycle = 'annual' THEN s.amount / 12.0 WHEN s.billing_cycle = 'quarterly' THEN s.amount / 3.0 END) as total_mrr, COUNT(st.ticket_id) as total_tickets, COUNT(st.ticket_id) * 1.0 / COUNT(DISTINCT s.user_id) as tickets_per_customer FROM plans p JOIN subscriptions s ON p.plan_id = s.plan_id LEFT JOIN support_tickets st ON s.user_id = st.user_id WHERE s.status = 'active' GROUP BY p.plan_tier ORDER BY total_mrr DESC",
+    "explanation": "Multi-table join across plans, subscriptions, and support. Calculates revenue and support metrics by tier.",
+    "business_context": "Identifies which plan tiers require most support. Helps with support team capacity planning."
+  },
+  {
+    "id": 28,
+    "category": "Aggregations",
+    "question": "What's our customer lifetime value?",
+    "sql": "SELECT AVG(customer_ltv) as avg_ltv FROM (SELECT user_id, SUM(amount) as customer_ltv FROM transactions WHERE status = 'success' AND transaction_type = 'charge' GROUP BY user_id) as user_revenues",
+    "explanation": "Nested query: inner query sums revenue per user, outer query averages across all users.",
+    "business_context": "Average LTV per customer. Must be 3x CAC for sustainable business model."
+  },
+  {
+    "id": 29,
+    "category": "Aggregations",
+    "question": "What percentage of our revenue comes from enterprise customers?",
+    "sql": "SELECT SUM(CASE WHEN u.company_size = 'Enterprise' THEN CASE WHEN s.billing_cycle = 'monthly' THEN s.amount WHEN s.billing_cycle = 'annual' THEN s.amount / 12.0 WHEN s.billing_cycle = 'quarterly' THEN s.amount / 3.0 END ELSE 0 END) * 100.0 / SUM(CASE WHEN s.billing_cycle = 'monthly' THEN s.amount WHEN s.billing_cycle = 'annual' THEN s.amount / 12.0 WHEN s.billing_cycle = 'quarterly' THEN s.amount / 3.0 END) as enterprise_revenue_pct FROM users u JOIN subscriptions s ON u.user_id = s.user_id WHERE s.status = 'active'",
+    "explanation": "Calculates enterprise MRR as percentage of total MRR using nested CASE statements.",
+    "business_context": "Shows customer concentration. High enterprise % = stable but risky if few customers."
+  },
+  {
+    "id": 30,
+    "category": "Filters & Edge Cases",
+    "question": "Show me customers who signed up this month but haven't subscribed yet",
+    "sql": "SELECT u.user_id, u.email, u.company_name, u.signup_date FROM users u LEFT JOIN subscriptions s ON u.user_id = s.user_id WHERE u.signup_date >= date('now', 'start of month') AND s.subscription_id IS NULL ORDER BY u.signup_date DESC",
+    "explanation": "LEFT JOIN to find users without subscriptions. Filters for recent signups. NULL check finds no matches.",
+    "business_context": "Lead nurturing opportunity. These users need activation/sales outreach."
+  }
+]
