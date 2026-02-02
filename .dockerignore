@@ -1,0 +1,49 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+
+# Database (will be generated)
+*.db
+*.db-journal
+
+# ChromaDB (will be generated)
+chroma_db/
+
+# Environment
+.env
+
+# Git
+.git/
+.gitignore
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+
+# Test outputs
+rag_comparison.json
+chart.png
+
+# Documentation (not needed in container)
+*.md
+!README.md
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb

@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  rag-analytics-agent:
+    build: .
+    container_name: rag-analytics-agent
+    ports:
+      - "8501:8501"
+    environment:
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+    volumes:
+      # Mount database and embeddings for persistence
+      - ./saas_analytics.db:/app/saas_analytics.db
+      - ./chroma_db:/app/chroma_db
+      # Mount .env file
+      - ./.env:/app/.env
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8501/_stcore/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
